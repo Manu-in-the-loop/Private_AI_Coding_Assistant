@@ -1,7 +1,11 @@
 # LeaderWorkerSet Operator instance — enables the LWS controller.
 # Applied after the LWS CRD is installed (wave 1).
+#
+# apiVersion was leaderworkerset.x-k8s.io/v1, but the actual CRD registered by
+# the leader-worker-set OLM operator (Red Hat Operators, stable-v1.0) is
+# operator.openshift.io/v1 (confirmed via the CSV's own alm-examples).
 ---
-apiVersion: leaderworkerset.x-k8s.io/v1
+apiVersion: operator.openshift.io/v1
 kind: LeaderWorkerSetOperator
 metadata:
   name: cluster
