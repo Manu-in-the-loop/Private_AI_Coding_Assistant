@@ -34,8 +34,8 @@ metadata:
 spec:
   project: private-code-assistant
   source:
-    repoURL: REPLACE_WITH_GITOPS_REPO_URL
-    targetRevision: main
+    repoURL: https://github.com/manujoy7/Private_AI_Coding_Assistant.git
+    targetRevision: nets-pca
     path: PCA_Deployment_ROSA/argocd/01-operators
   destination:
     server: https://kubernetes.default.svc
@@ -67,8 +67,8 @@ metadata:
 spec:
   project: private-code-assistant
   source:
-    repoURL: REPLACE_WITH_GITOPS_REPO_URL
-    targetRevision: main
+    repoURL: https://github.com/manujoy7/Private_AI_Coding_Assistant.git
+    targetRevision: nets-pca
     path: PCA_Deployment_ROSA/argocd/02-platform-config
   destination:
     server: https://kubernetes.default.svc
@@ -99,8 +99,8 @@ metadata:
 spec:
   project: private-code-assistant
   source:
-    repoURL: REPLACE_WITH_GITOPS_REPO_URL
-    targetRevision: main
+    repoURL: https://github.com/manujoy7/Private_AI_Coding_Assistant.git
+    targetRevision: nets-pca
     path: PCA_Deployment_ROSA/argocd/03-ai-serving
   destination:
     server: https://kubernetes.default.svc
@@ -131,8 +131,8 @@ metadata:
 spec:
   project: private-code-assistant
   source:
-    repoURL: REPLACE_WITH_GITOPS_REPO_URL
-    targetRevision: main
+    repoURL: https://github.com/manujoy7/Private_AI_Coding_Assistant.git
+    targetRevision: nets-pca
     path: PCA_Deployment_ROSA/argocd/04-devspaces
   destination:
     server: https://kubernetes.default.svc
