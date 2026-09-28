@@ -28,8 +28,11 @@ spec:
             type: OpenshiftDefaultIngress
         managementState: Removed
       rawDeploymentServiceConfig: Headed
+    # Not needed for this deployment (LLM serving + DevSpaces + llm-d routing).
+    # Like kserve's old serving path, ModelRegistry also depends on the deprecated
+    # maistra.io ServiceMeshMember API, which doesn't exist under Service Mesh 3.
     modelregistry:
-      managementState: Managed
+      managementState: Removed
     dashboard:
       managementState: Managed
     datasciencepipelines:
