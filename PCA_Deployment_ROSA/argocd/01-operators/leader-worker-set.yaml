@@ -1,28 +1,41 @@
-# LeaderWorkerSet Operator — required by KServe for multi-node inference
+# LeaderWorkerSet Operator — required by KServe for multi-node inference.
 #
-# Previously pointed at https://github.com/llm-d/llm-d-playbook.git, which does not
-# exist (confirmed 404 via git ls-remote and the llm-d GitHub org's repo listing).
-# Replaced with the official upstream kubernetes-sigs/lws repo's standard kustomize
-# install path (config/default), pinned to the latest release tag.
-apiVersion: argoproj.io/v1alpha1
-kind: Application
+# Previously an ArgoCD Application pointed at
+# https://github.com/llm-d/llm-d-playbook.git (does not exist — confirmed via
+# git ls-remote 404 and the llm-d GitHub org's actual repo listing), installing
+# via a raw upstream kustomize overlay. Discovered there is an actual Red Hat
+# OLM package named "leader-worker-set" (channel stable-v1.0,
+# CSV leader-worker-set.v1.0.1) available on this cluster's redhat-operators
+# catalog — this is what lws-operator-cr.yaml's LeaderWorkerSetOperator/cluster
+# CR (leaderworkerset.x-k8s.io/v1) is actually designed for. Install it the same
+# way as the other OLM operators in subscriptions.yaml.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-lws-operator
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: openshift-lws-operator
+  namespace: openshift-lws-operator
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec: {}
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
 metadata:
   name: leader-worker-set
-  namespace: openshift-gitops
+  namespace: openshift-lws-operator
   annotations:
     argocd.argoproj.io/sync-wave: "1"
 spec:
-  project: private-code-assistant
-  source:
-    repoURL: https://github.com/kubernetes-sigs/lws.git
-    targetRevision: v0.11.0
-    path: config/default
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: lws-system
-  syncPolicy:
-    automated:
-      selfHeal: true
-    syncOptions:
-      - CreateNamespace=true
-      - ServerSideApply=true
+  channel: stable-v1.0
+  installPlanApproval: Automatic
+  name: leader-worker-set
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace

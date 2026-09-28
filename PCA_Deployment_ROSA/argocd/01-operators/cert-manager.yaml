@@ -1,33 +1,39 @@
-# cert-manager — required by KServe/LWS for webhook certificates
+# cert-manager — required by KServe/LWS for webhook certificates.
 #
-# Previously pointed at https://github.com/llm-d/llm-d-playbook.git, which does not
-# exist (confirmed 404 via git ls-remote and the llm-d GitHub org's repo listing).
-# Replaced with the official upstream Helm chart (Jetstack), which is the standard,
-# supported way to install cert-manager and needs no fork/mirror.
-apiVersion: argoproj.io/v1alpha1
-kind: Application
+# Previously an ArgoCD Application pointed at
+# https://github.com/llm-d/llm-d-playbook.git (does not exist — confirmed via
+# git ls-remote 404 and the llm-d GitHub org's actual repo listing). Replaced with
+# Red Hat's own supported "cert-manager Operator for Red Hat OpenShift"
+# (openshift-cert-manager-operator), installed the same way as the other OLM
+# operators in subscriptions.yaml, instead of depending on an external
+# fork/mirror or third-party Helm chart.
+---
+apiVersion: v1
+kind: Namespace
 metadata:
-  name: cert-manager
-  namespace: openshift-gitops
+  name: cert-manager-operator
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: cert-manager-operator
+  namespace: cert-manager-operator
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec: {}
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: openshift-cert-manager-operator
+  namespace: cert-manager-operator
   annotations:
     argocd.argoproj.io/sync-wave: "1"
 spec:
-  project: private-code-assistant
-  source:
-    repoURL: https://charts.jetstack.io
-    chart: cert-manager
-    targetRevision: v1.16.2
-    helm:
-      releaseName: cert-manager
-      values: |
-        crds:
-          enabled: true
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: cert-manager
-  syncPolicy:
-    automated:
-      selfHeal: true
-    syncOptions:
-      - CreateNamespace=true
-      - ServerSideApply=true
+  channel: stable-v1
+  installPlanApproval: Automatic
+  name: openshift-cert-manager-operator
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace

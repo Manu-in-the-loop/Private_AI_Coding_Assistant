@@ -9,6 +9,13 @@ metadata:
     argocd.argoproj.io/sync-wave: "5"
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
+  # daemonsets is a required field on this CRD version (no default) — omitting it
+  # made ClusterPolicy invalid: "spec.daemonsets: Required value", which blocked
+  # the whole pca-operators sync. Values match the operator's own alm-examples default.
+  daemonsets:
+    updateStrategy: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: "1"
   operator:
     defaultRuntime: crio
   driver:
