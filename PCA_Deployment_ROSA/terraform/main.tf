@@ -2,6 +2,9 @@ locals {
   operator_role_prefix   = var.operator_role_prefix != "" ? var.operator_role_prefix : var.cluster_name
   billing_account_id     = var.aws_billing_account_id != "" ? var.aws_billing_account_id : var.aws_account_id
   private_subnet_ids     = var.use_existing_vpc ? var.existing_private_subnet_ids : aws_subnet.private[*].id
+  # ROSA HCP requires at least one public subnet included in aws_subnet_ids (even though
+  # compute nodes land in the private subnets) - the API rejects an all-private subnet list.
+  cluster_subnet_ids     = var.use_existing_vpc ? var.existing_private_subnet_ids : concat(aws_subnet.private[*].id, [aws_subnet.public[0].id])
   rosa_creator_arn       = data.aws_caller_identity.current.arn
 }
 
@@ -103,7 +106,6 @@ module "account_iam_resources" {
   source = "terraform-redhat/rosa-hcp/rhcs//modules/account-iam-resources"
 
   account_role_prefix = var.account_role_prefix
-  openshift_version   = var.openshift_version
 }
 
 module "oidc_config" {
@@ -115,7 +117,6 @@ module "oidc_config" {
 module "operator_roles" {
   source = "terraform-redhat/rosa-hcp/rhcs//modules/operator-roles"
 
-  account_role_prefix  = var.account_role_prefix
   operator_role_prefix = local.operator_role_prefix
   oidc_endpoint_url    = module.oidc_config.oidc_endpoint_url
   path                 = "/service-role/"
@@ -129,7 +130,7 @@ resource "rhcs_cluster_rosa_hcp" "cluster" {
   cloud_region           = var.aws_region
   aws_account_id         = var.aws_account_id
   aws_billing_account_id = local.billing_account_id
-  aws_subnet_ids         = local.private_subnet_ids
+  aws_subnet_ids         = local.cluster_subnet_ids
   availability_zones     = var.availability_zones
   version                = var.openshift_version
   replicas               = var.default_worker_replicas
@@ -140,10 +141,10 @@ resource "rhcs_cluster_rosa_hcp" "cluster" {
   }
 
   sts = {
-    role_arn         = module.account_iam_resources.account_roles_arn["Installer"]
-    support_role_arn = module.account_iam_resources.account_roles_arn["Support"]
+    role_arn         = module.account_iam_resources.account_roles_arn["HCP-ROSA-Installer"]
+    support_role_arn = module.account_iam_resources.account_roles_arn["HCP-ROSA-Support"]
     instance_iam_roles = {
-      worker_role_arn = module.account_iam_resources.account_roles_arn["Worker"]
+      worker_role_arn = module.account_iam_resources.account_roles_arn["HCP-ROSA-Worker"]
     }
     operator_role_prefix = local.operator_role_prefix
     oidc_config_id       = module.oidc_config.oidc_config_id
@@ -179,12 +180,10 @@ resource "rhcs_hcp_machine_pool" "gpu" {
     instance_type = var.gpu_instance_type
   }
 
-  autoscaling = var.gpu_pool_autoscaling ? {
-    enabled      = true
-    min_replicas = var.gpu_pool_replicas
-    max_replicas = var.gpu_pool_max_replicas
-  } : {
-    enabled = false
+  autoscaling = {
+    enabled      = var.gpu_pool_autoscaling
+    min_replicas = var.gpu_pool_autoscaling ? var.gpu_pool_replicas : null
+    max_replicas = var.gpu_pool_autoscaling ? var.gpu_pool_max_replicas : null
   }
 
   replicas = var.gpu_pool_autoscaling ? null : var.gpu_pool_replicas
@@ -196,9 +195,9 @@ resource "rhcs_hcp_machine_pool" "gpu" {
   }
 
   taints = [{
-    key    = "nvidia.com/gpu"
-    value  = "present"
-    effect = "NoSchedule"
+    key           = "nvidia.com/gpu"
+    value         = "present"
+    schedule_type = "NoSchedule"
   }]
 
   depends_on = [rhcs_cluster_wait.wait]
@@ -229,9 +228,9 @@ resource "rhcs_hcp_machine_pool" "inferentia" {
   }
 
   taints = [{
-    key    = "aws.amazon.com/neuroncore"
-    value  = "present"
-    effect = "NoSchedule"
+    key           = "aws.amazon.com/neuroncore"
+    value         = "present"
+    schedule_type = "NoSchedule"
   }]
 
   depends_on = [rhcs_cluster_wait.wait]
