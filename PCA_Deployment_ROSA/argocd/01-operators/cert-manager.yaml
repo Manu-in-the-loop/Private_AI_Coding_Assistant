@@ -1,6 +1,9 @@
-# cert-manager — required by KServe for webhook certificates
-# Installed via kustomize overlay from llm-d-playbook
----
+# cert-manager — required by KServe/LWS for webhook certificates
+#
+# Previously pointed at https://github.com/llm-d/llm-d-playbook.git, which does not
+# exist (confirmed 404 via git ls-remote and the llm-d GitHub org's repo listing).
+# Replaced with the official upstream Helm chart (Jetstack), which is the standard,
+# supported way to install cert-manager and needs no fork/mirror.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -11,13 +14,20 @@ metadata:
 spec:
   project: private-code-assistant
   source:
-    repoURL: https://github.com/llm-d/llm-d-playbook.git
-    targetRevision: main
-    path: components/cert-manager/overlays/stable
+    repoURL: https://charts.jetstack.io
+    chart: cert-manager
+    targetRevision: v1.16.2
+    helm:
+      releaseName: cert-manager
+      values: |
+        crds:
+          enabled: true
   destination:
     server: https://kubernetes.default.svc
+    namespace: cert-manager
   syncPolicy:
     automated:
       selfHeal: true
     syncOptions:
+      - CreateNamespace=true
       - ServerSideApply=true

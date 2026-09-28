@@ -1,5 +1,9 @@
 # LeaderWorkerSet Operator — required by KServe for multi-node inference
----
+#
+# Previously pointed at https://github.com/llm-d/llm-d-playbook.git, which does not
+# exist (confirmed 404 via git ls-remote and the llm-d GitHub org's repo listing).
+# Replaced with the official upstream kubernetes-sigs/lws repo's standard kustomize
+# install path (config/default), pinned to the latest release tag.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -10,13 +14,15 @@ metadata:
 spec:
   project: private-code-assistant
   source:
-    repoURL: https://github.com/llm-d/llm-d-playbook.git
-    targetRevision: main
-    path: components/lws/overlays/stable
+    repoURL: https://github.com/kubernetes-sigs/lws.git
+    targetRevision: v0.11.0
+    path: config/default
   destination:
     server: https://kubernetes.default.svc
+    namespace: lws-system
   syncPolicy:
     automated:
       selfHeal: true
     syncOptions:
+      - CreateNamespace=true
       - ServerSideApply=true

@@ -12,11 +12,21 @@ spec:
   components:
     kserve:
       managementState: Managed
+      defaultDeploymentMode: RawDeployment
+      # serving.managementState must be Removed (not Managed) on clusters running
+      # OpenShift Service Mesh 3 (Istio-native, servicemeshoperator3). Managed here
+      # triggers KServe's legacy Knative-Serverless integration path, which looks up
+      # a ServiceMeshMember (maistra.io/v1) — an API group that only exists in the
+      # deprecated Service Mesh 2.x operator, not Service Mesh 3. That lookup fails
+      # with "no matches for kind ServiceMeshMember", leaving KServe/ModelRegistry
+      # permanently NotReady. RawDeployment mode (used here anyway, per
+      # rawDeploymentServiceConfig: Headed below) does not need Knative or Service
+      # Mesh at all, so disable the serving/serverless sub-component entirely.
       serving:
         ingressGateway:
           certificate:
             type: OpenshiftDefaultIngress
-        managementState: Managed
+        managementState: Removed
       rawDeploymentServiceConfig: Headed
     modelregistry:
       managementState: Managed
