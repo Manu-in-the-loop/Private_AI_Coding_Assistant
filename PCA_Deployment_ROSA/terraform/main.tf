@@ -119,7 +119,12 @@ module "operator_roles" {
 
   operator_role_prefix = local.operator_role_prefix
   oidc_endpoint_url    = module.oidc_config.oidc_endpoint_url
-  path                 = "/service-role/"
+  path                 = "/"
+  # NOTE: rhcs_cluster_rosa_hcp only takes operator_role_prefix (no explicit ARNs) and
+  # constructs the expected operator role ARNs internally assuming the default path "/".
+  # Using any other path here (e.g. "/service-role/") causes AssumeRoleWithWebIdentity to
+  # fail with a generic AccessDenied during cluster install, since OCM looks for the role
+  # at a path-less ARN that doesn't actually exist. Must match account role path (also "/").
 }
 
 # ════════════════════════════════════════════════
