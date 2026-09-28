@@ -7,7 +7,14 @@ metadata:
   name: model-cache
   namespace: ai-serving
   annotations:
-    argocd.argoproj.io/sync-wave: "0"
+    # Must be the SAME sync-wave as the LLMInferenceService (wave 2), not an
+    # earlier one. gp3-csi uses VolumeBindingMode: WaitForFirstConsumer, so this
+    # PVC stays Pending until a pod (created by LLMInferenceService) references
+    # it. If the PVC is in an earlier wave, ArgoCD's wave-gate deadlocks forever:
+    # it won't advance past the PVC's wave until the PVC is Healthy/Bound, but
+    # the PVC can't bind until the later wave (that creates the consuming pod)
+    # is allowed to apply. Same wave = applied together, no gate in between.
+    argocd.argoproj.io/sync-wave: "2"
 spec:
   accessModes:
     - ReadWriteOnce
