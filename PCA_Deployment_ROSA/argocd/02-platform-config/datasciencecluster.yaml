@@ -13,8 +13,13 @@
 #   - modelmeshserving component was removed entirely in 3.5 (ack-3.5-removed-
 #     modelmeshserving) — there is no such field on the v2 CRD.
 #   - datasciencepipelines was renamed to aipipelines.
+#   - The CRD serves both v1 (old schema, storage=false) and v2 (new schema,
+#     storage=true) simultaneously via a conversion webhook. Fields like
+#     aipipelines only exist in v2's OpenAPI schema — applying them under
+#     apiVersion v1 gets rejected with "field not declared in schema" even
+#     though the API server accepts v1 requests in general. Use v2 explicitly.
 ---
-apiVersion: datasciencecluster.opendatahub.io/v1
+apiVersion: datasciencecluster.opendatahub.io/v2
 kind: DataScienceCluster
 metadata:
   name: default-dsc
