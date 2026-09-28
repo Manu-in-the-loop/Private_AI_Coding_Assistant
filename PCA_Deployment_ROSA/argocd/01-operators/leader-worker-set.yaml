@@ -24,7 +24,11 @@ metadata:
   namespace: openshift-lws-operator
   annotations:
     argocd.argoproj.io/sync-wave: "0"
-spec: {}
+spec:
+  # leader-worker-set.v1.0.1 only supports the OwnNamespace install mode
+  # (AllNamespaces is unsupported), so targetNamespaces must be set explicitly.
+  targetNamespaces:
+    - openshift-lws-operator
 ---
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
