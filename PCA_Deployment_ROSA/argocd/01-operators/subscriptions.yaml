@@ -26,7 +26,14 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "1"
 spec:
-  channel: stable-2.19
+  # RHOAI 2.19 does NOT support the LLMInferenceService CRD / Distributed
+  # Inference with llm-d — that requires RHOAI 3.0+ (confirmed via Red Hat docs:
+  # "Deploy models using Distributed Inference with llm-d", RHOAI 3.4/3.5).
+  # Since this deployment's entire model-serving design (03-ai-serving/
+  # llminferenceservice.yaml, llm-d, EPP routing) depends on that CRD, and no
+  # workloads/data exist yet on this fresh cluster to migrate, install RHOAI at
+  # channel stable-3.x (3.5.1) directly rather than 2.19.
+  channel: stable-3.x
   installPlanApproval: Automatic
   name: rhods-operator
   source: redhat-operators
