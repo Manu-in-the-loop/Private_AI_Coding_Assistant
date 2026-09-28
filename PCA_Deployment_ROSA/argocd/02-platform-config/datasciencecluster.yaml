@@ -1,5 +1,18 @@
-# Patch DataScienceCluster for KServe "Headed" mode (required for llm-d + Gateway API)
+# Patch DataScienceCluster for KServe RawDeployment mode (required for llm-d + Gateway API)
 # The DSC is created by the RHOAI operator; this resource ensures the correct configuration.
+#
+# NOTE: this cluster runs RHOAI 3.5.1 (see 01-operators/subscriptions.yaml — the
+# LLMInferenceService CRD / Distributed Inference with llm-d requires RHOAI 3.0+,
+# not available in the originally-configured 2.19). The DataScienceCluster CRD
+# schema changed substantially between 2.19 (v1) and 3.5 (v2):
+#   - kserve.serving (Knative-Serverless config) no longer exists — "Only
+#     RawDeployment mode is supported" per the v2 schema description, so there is
+#     no more Serverless/Managed vs RawDeployment choice to make and no more
+#     Service-Mesh-based ServiceMeshMember dependency at all.
+#   - kserve.defaultDeploymentMode no longer exists (same reason).
+#   - modelmeshserving component was removed entirely in 3.5 (ack-3.5-removed-
+#     modelmeshserving) — there is no such field on the v2 CRD.
+#   - datasciencepipelines was renamed to aipipelines.
 ---
 apiVersion: datasciencecluster.opendatahub.io/v1
 kind: DataScienceCluster
@@ -12,32 +25,13 @@ spec:
   components:
     kserve:
       managementState: Managed
-      defaultDeploymentMode: RawDeployment
-      # serving.managementState must be Removed (not Managed) on clusters running
-      # OpenShift Service Mesh 3 (Istio-native, servicemeshoperator3). Managed here
-      # triggers KServe's legacy Knative-Serverless integration path, which looks up
-      # a ServiceMeshMember (maistra.io/v1) — an API group that only exists in the
-      # deprecated Service Mesh 2.x operator, not Service Mesh 3. That lookup fails
-      # with "no matches for kind ServiceMeshMember", leaving KServe/ModelRegistry
-      # permanently NotReady. RawDeployment mode (used here anyway, per
-      # rawDeploymentServiceConfig: Headed below) does not need Knative or Service
-      # Mesh at all, so disable the serving/serverless sub-component entirely.
-      serving:
-        ingressGateway:
-          certificate:
-            type: OpenshiftDefaultIngress
-        managementState: Removed
       rawDeploymentServiceConfig: Headed
     # Not needed for this deployment (LLM serving + DevSpaces + llm-d routing).
-    # Like kserve's old serving path, ModelRegistry also depends on the deprecated
-    # maistra.io ServiceMeshMember API, which doesn't exist under Service Mesh 3.
     modelregistry:
       managementState: Removed
     dashboard:
       managementState: Managed
-    datasciencepipelines:
-      managementState: Managed
-    modelmeshserving:
+    aipipelines:
       managementState: Managed
     workbenches:
       managementState: Managed
