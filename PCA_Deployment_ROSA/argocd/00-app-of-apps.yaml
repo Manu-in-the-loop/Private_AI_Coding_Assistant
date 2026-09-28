@@ -72,6 +72,13 @@ spec:
     path: PCA_Deployment_ROSA/argocd/02-platform-config
   destination:
     server: https://kubernetes.default.svc
+  ignoreDifferences:
+    - group: ""
+      kind: Secret
+      name: hf-token
+      namespace: ai-serving
+      jsonPointers:
+        - /data/token
   syncPolicy:
     automated:
       prune: true
@@ -79,6 +86,7 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+      - RespectIgnoreDifferences=true
     retry:
       limit: 5
       backoff:

@@ -11,4 +11,7 @@ metadata:
     argocd.argoproj.io/sync-wave: "1"
 type: Opaque
 data:
-  token: REPLACE_WITH_BASE64_HF_TOKEN
+  # Intentionally empty in git (public repo) — the real token is live-patched
+  # directly onto the cluster and protected from selfHeal via this Application's
+  # spec.ignoreDifferences (see 00-app-of-apps.yaml). Never commit a real token here.
+  token: ""
