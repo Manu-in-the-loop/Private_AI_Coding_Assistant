@@ -3,7 +3,7 @@
 Fully reproducible deployment of an enterprise-grade private AI code assistant on Red Hat OpenShift (ROSA HCP), using **Terraform** for infrastructure provisioning and **ArgoCD (GitOps)** for all on-cluster components.
 
 The end result is a ROSA HCP cluster running:
-- **Qwen3-Coder-30B** served via KServe + llm-d with intelligent EPP routing
+- **Qwen3.8-27B** served via KServe + llm-d with intelligent EPP routing
 - **OpenShift Dev Spaces** with pre-configured VS Code extensions (Roo Code, Continue, Cline) consuming the self-hosted model
 - All inference traffic stays **cluster-internal** (zero external egress)
 
@@ -87,7 +87,7 @@ PCA_deployment/
 │   ├── 03-ai-serving/                     # Wave 3: Model Serving
 │   │   ├── pvcs.yaml                      #   100Gi model cache (gp3-csi)
 │   │   ├── tls-secret-job.yaml            #   Self-signed cert for Gateway
-│   │   ├── llminferenceservice.yaml       #   Qwen3-Coder-30B model deployment
+│   │   ├── llminferenceservice.yaml       #   Qwen3.8-27B model deployment
 │   │   ├── llm-d-gateway.yaml             #   Gateway + HTTPRoute (EPP routing)
 │   │   ├── hardware-profiles.yaml         #   Trainium HardwareProfile
 │   │   └── vllm-neuron-runtime-template.yaml
@@ -675,7 +675,7 @@ echo "Console: $(terraform output -raw cluster_console_url)"
 
 - **PVC**: 100Gi `model-cache` on `gp3-csi` (persists model weights across restarts)
 - **TLS**: Self-signed cert Job for the llm-d Gateway
-- **Model Deployment** (`qwen3-coder`): `Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8` with vLLM args:
+- **Model Deployment** (`qwen3-coder`): `Qwen/Qwen3.8-27B-FP8` with vLLM args:
   - `--tool-call-parser qwen3_coder --reasoning-parser qwen3`
   - `--max-model-len 32768 --gpu-memory-utilization 0.90`
   - `--enable-prefix-caching --kv-cache-dtype fp8`
@@ -699,7 +699,7 @@ Each extension connects to the self-hosted model endpoint. Here is exactly what 
 | Setting | Value |
 |---------|-------|
 | **Model Endpoint (Base URL)** | `https://llm-d-gateway-data-science-gateway-class.ai-serving.svc.cluster.local/v1` |
-| **Model ID** | `Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8` |
+| **Model ID** | `Qwen/Qwen3.8-27B-FP8` |
 | **API Key** | `EMPTY` (no auth required — cluster-internal) |
 
 | Extension | Auto-Configured? | How | What the User Sees |

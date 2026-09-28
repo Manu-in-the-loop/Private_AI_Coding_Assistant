@@ -1,5 +1,12 @@
-# LLMInferenceService — Qwen3-Coder-30B on NVIDIA GPU via KServe + llm-d
+# LLMInferenceService — Qwen/Qwen3.8-27B-FP8 on NVIDIA L40S (g6e.2xlarge) via KServe + llm-d
 # This single CR creates: Deployment, Service, InferencePool, EPP, HTTPRoute
+# Context window: 200000 tokens (model's native max is 262144; --max-model-len caps it here).
+# NOTE: object name/labels kept as "qwen3-coder" (from the original template) so the
+# InferencePool/HTTPRoute/Service names referenced by llm-d-gateway.yaml and the DevSpaces
+# ConfigMaps below do not need to change — only the actual model id/uri/args changed.
+# vLLM image pinned explicitly to vllm/vllm-openai:v0.27.0 because Qwen3.8's hybrid
+# DeltaNet/attention architecture needs a build with hybrid-linear-attention support; the
+# RHOAI-managed default runtime image is not guaranteed to include it yet.
 ---
 apiVersion: serving.kserve.io/v1alpha1
 kind: LLMInferenceService
@@ -10,12 +17,12 @@ metadata:
     argocd.argoproj.io/sync-wave: "2"
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
     opendatahub.io/model-type: generative
-    openshift.io/display-name: Qwen3 Coder 30B
+    openshift.io/display-name: Qwen3.8 27B FP8
     security.opendatahub.io/enable-auth: "false"
 spec:
   modelSpec:
-    uri: hf://Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8
-    name: Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8
+    uri: hf://Qwen/Qwen3.8-27B-FP8
+    name: Qwen/Qwen3.8-27B-FP8
     replicas: 1
   routerSpec:
     targetModels: {}
@@ -87,35 +94,34 @@ spec:
               claimName: model-cache
         containers:
           - name: main
+            image: docker.io/vllm/vllm-openai:v0.27.0
             env:
               - name: VLLM_ADDITIONAL_ARGS
                 value: >-
                   --disable-uvicorn-access-log
-                  --max-model-len 32768
-                  --gpu-memory-utilization 0.90
+                  --max-model-len 200000
+                  --max-num-seqs 128
+                  --gpu-memory-utilization 0.92
                   --enable-prefix-caching
-                  --enable-auto-tool-choice
-                  --tool-call-parser qwen3_coder
-                  --reasoning-parser qwen3
                   --kv-cache-dtype fp8
             volumeMounts:
               - name: kserve-provision-location
                 mountPath: /mnt/models
             resources:
               requests:
-                cpu: "4"
-                memory: 48Gi
+                cpu: "6"
+                memory: 56Gi
                 nvidia.com/gpu: "1"
               limits:
-                cpu: "4"
-                memory: 48Gi
+                cpu: "6"
+                memory: 56Gi
                 nvidia.com/gpu: "1"
             livenessProbe:
               httpGet:
                 path: /health
                 port: 8000
                 scheme: HTTPS
-              initialDelaySeconds: 300
+              initialDelaySeconds: 420
               periodSeconds: 30
               timeoutSeconds: 30
               failureThreshold: 10
@@ -124,7 +130,7 @@ spec:
                 path: /health
                 port: 8000
                 scheme: HTTPS
-              initialDelaySeconds: 120
+              initialDelaySeconds: 180
               periodSeconds: 15
               timeoutSeconds: 10
               failureThreshold: 5

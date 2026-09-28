@@ -16,16 +16,26 @@
 #               globalState, not files). Enter once in Cline UI:
 #                 Provider: OpenAI Compatible
 #                 Base URL: https://llm-d-gateway-data-science-gateway-class.ai-serving.svc.cluster.local/v1
-#                 Model:    Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8
+#                 Model:    Qwen/Qwen3.8-27B-FP8
 #                 API Key:  EMPTY
+#
+#   OpenCode  — terminal AI coding agent (all 3 workspaces). Installed at postStart via the
+#               official installer (pinned OPENCODE_VERSION=1.15.13), symlinked into
+#               ~/.local/bin (on this image's PATH). Config written to
+#               ~/.config/opencode/opencode.json pointing at the same llm-d gateway, using an
+#               openai-compatible provider named "vllm" with model
+#               "vllm/Qwen/Qwen3.8-27B-FP8" and limit.context=200000 (matches vLLM's
+#               --max-model-len below). Auth is ~/.local/share/opencode/auth.json with a dummy
+#               "EMPTY" API key (cluster-internal, no real auth needed). Launch via the
+#               "Start OpenCode (TUI)" devfile command or just running `opencode` in a terminal.
 #
 # Model endpoint (cluster-internal HTTPS, all traffic stays inside OpenShift):
 #   https://llm-d-gateway-data-science-gateway-class.ai-serving.svc.cluster.local/v1
 #
-# vLLM is configured with:
-#   --enable-auto-tool-choice   required: Roo Code sends tool_choice:"auto"; vLLM rejects without this
-#   --tool-call-parser qwen3_coder  parses Qwen3-Coder XML tool calls into OpenAI tool_calls array
-#   --reasoning-parser qwen3    isolates <think> tokens from content
+# vLLM is configured with (see argocd/03-ai-serving/llminferenceservice.yaml):
+#   --max-model-len 200000      200k-token context window
+#   --enable-prefix-caching     KV-cache reuse across requests
+#   --kv-cache-dtype fp8        memory-efficient KV-cache on the single L40S GPU
 ---
 apiVersion: workspace.devfile.io/v1alpha2
 kind: DevWorkspace
@@ -51,9 +61,9 @@ spec:
       - name: dev-tools
         container:
           image: registry.redhat.io/devspaces/udi-rhel8:latest
-          memoryLimit: 4Gi
+          memoryLimit: 6Gi
           memoryRequest: 512Mi
-          cpuLimit: "2000m"
+          cpuLimit: "3000m"
           cpuRequest: 250m
           mountSources: true
           env:
@@ -61,7 +71,9 @@ spec:
             - name: VLLM_ENDPOINT
               value: "https://llm-d-gateway-data-science-gateway-class.ai-serving.svc.cluster.local/v1"
             - name: VLLM_MODEL_ID
-              value: "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8"
+              value: "Qwen/Qwen3.8-27B-FP8"
+            - name: OPENCODE_MODEL_CONTEXT
+              value: "200000"
             # Standard OpenAI env vars — picked up automatically by many AI tools/SDKs
             - name: OPENAI_API_KEY
               value: "EMPTY"
@@ -112,7 +124,48 @@ spec:
 
             # Suppress harmless Continue ENOENT warning about missing ~/Desktop
             mkdir -p /home/user/Desktop
+
+            # ── OpenCode install + config ─────────────────────────────────────────────────────
+            # Installs the OpenCode CLI (terminal AI coding agent) and points it at the same
+            # llm-d gateway/model as the other extensions, with a 200k-token context window.
+            if [ ! -x /home/user/.opencode/bin/opencode ]; then
+              curl -fsSL https://opencode.ai/install 2>/dev/null | OPENCODE_VERSION=1.15.13 bash 2>/dev/null || true
+            fi
+            mkdir -p /home/user/.local/bin
+            [ -x /home/user/.opencode/bin/opencode ] && ln -sf /home/user/.opencode/bin/opencode /home/user/.local/bin/opencode
+            mkdir -p /home/user/.config/opencode /home/user/.local/share/opencode
+            cat > /home/user/.config/opencode/opencode.json <<'OCJSON'
+            {
+              "$schema": "https://opencode.ai/config.json",
+              "provider": {
+                "vllm": {
+                  "npm": "@ai-sdk/openai-compatible",
+                  "name": "Private AI Gateway (llm-d)",
+                  "options": { "baseURL": "https://llm-d-gateway-data-science-gateway-class.ai-serving.svc.cluster.local/v1" },
+                  "models": {
+                    "Qwen/Qwen3.8-27B-FP8": {
+                      "name": "Qwen3.8 27B FP8 (Private AI)",
+                      "limit": { "context": 200000, "output": 8192 }
+                    }
+                  }
+                }
+              },
+              "model": "vllm/Qwen/Qwen3.8-27B-FP8"
+            }
+            OCJSON
+            cat > /home/user/.local/share/opencode/auth.json <<'OCAUTH'
+            {"vllm":{"type":"api","key":"EMPTY"}}
+            OCAUTH
           label: Install and configure AI extensions
+      - id: opencode
+        exec:
+          component: dev-tools
+          workingDir: /projects
+          commandLine: /home/user/.local/bin/opencode
+          label: "Start OpenCode (TUI)"
+          group:
+            kind: run
+            isDefault: false
     events:
       postStart:
         - install-and-configure-extensions
@@ -141,16 +194,18 @@ spec:
       - name: dev-tools
         container:
           image: registry.redhat.io/devspaces/udi-rhel8:latest
-          memoryLimit: 4Gi
+          memoryLimit: 6Gi
           memoryRequest: 512Mi
-          cpuLimit: "2000m"
+          cpuLimit: "3000m"
           cpuRequest: 250m
           mountSources: true
           env:
             - name: VLLM_ENDPOINT
               value: "https://llm-d-gateway-data-science-gateway-class.ai-serving.svc.cluster.local/v1"
             - name: VLLM_MODEL_ID
-              value: "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8"
+              value: "Qwen/Qwen3.8-27B-FP8"
+            - name: OPENCODE_MODEL_CONTEXT
+              value: "200000"
             - name: OPENAI_API_KEY
               value: "EMPTY"
             - name: OPENAI_BASE_URL
@@ -183,7 +238,46 @@ spec:
             rm -f /home/user/.continue-data/config.yaml
             ln -sf /home/user/.continue/config.yaml /home/user/.continue-data/config.yaml
             mkdir -p /home/user/Desktop
+
+            # ── OpenCode install + config ─────────────────────────────────────────────────────
+            if [ ! -x /home/user/.opencode/bin/opencode ]; then
+              curl -fsSL https://opencode.ai/install 2>/dev/null | OPENCODE_VERSION=1.15.13 bash 2>/dev/null || true
+            fi
+            mkdir -p /home/user/.local/bin
+            [ -x /home/user/.opencode/bin/opencode ] && ln -sf /home/user/.opencode/bin/opencode /home/user/.local/bin/opencode
+            mkdir -p /home/user/.config/opencode /home/user/.local/share/opencode
+            cat > /home/user/.config/opencode/opencode.json <<'OCJSON'
+            {
+              "$schema": "https://opencode.ai/config.json",
+              "provider": {
+                "vllm": {
+                  "npm": "@ai-sdk/openai-compatible",
+                  "name": "Private AI Gateway (llm-d)",
+                  "options": { "baseURL": "https://llm-d-gateway-data-science-gateway-class.ai-serving.svc.cluster.local/v1" },
+                  "models": {
+                    "Qwen/Qwen3.8-27B-FP8": {
+                      "name": "Qwen3.8 27B FP8 (Private AI)",
+                      "limit": { "context": 200000, "output": 8192 }
+                    }
+                  }
+                }
+              },
+              "model": "vllm/Qwen/Qwen3.8-27B-FP8"
+            }
+            OCJSON
+            cat > /home/user/.local/share/opencode/auth.json <<'OCAUTH'
+            {"vllm":{"type":"api","key":"EMPTY"}}
+            OCAUTH
           label: Install and configure AI extensions
+      - id: opencode
+        exec:
+          component: dev-tools
+          workingDir: /projects
+          commandLine: /home/user/.local/bin/opencode
+          label: "Start OpenCode (TUI)"
+          group:
+            kind: run
+            isDefault: false
     events:
       postStart:
         - install-and-configure-extensions
@@ -212,16 +306,18 @@ spec:
       - name: dev-tools
         container:
           image: registry.redhat.io/devspaces/udi-rhel8:latest
-          memoryLimit: 4Gi
+          memoryLimit: 6Gi
           memoryRequest: 512Mi
-          cpuLimit: "2000m"
+          cpuLimit: "3000m"
           cpuRequest: 250m
           mountSources: true
           env:
             - name: VLLM_ENDPOINT
               value: "https://llm-d-gateway-data-science-gateway-class.ai-serving.svc.cluster.local/v1"
             - name: VLLM_MODEL_ID
-              value: "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8"
+              value: "Qwen/Qwen3.8-27B-FP8"
+            - name: OPENCODE_MODEL_CONTEXT
+              value: "200000"
             - name: OPENAI_API_KEY
               value: "EMPTY"
             - name: OPENAI_BASE_URL
@@ -254,7 +350,46 @@ spec:
             rm -f /home/user/.continue-data/config.yaml
             ln -sf /home/user/.continue/config.yaml /home/user/.continue-data/config.yaml
             mkdir -p /home/user/Desktop
+
+            # ── OpenCode install + config ─────────────────────────────────────────────────────
+            if [ ! -x /home/user/.opencode/bin/opencode ]; then
+              curl -fsSL https://opencode.ai/install 2>/dev/null | OPENCODE_VERSION=1.15.13 bash 2>/dev/null || true
+            fi
+            mkdir -p /home/user/.local/bin
+            [ -x /home/user/.opencode/bin/opencode ] && ln -sf /home/user/.opencode/bin/opencode /home/user/.local/bin/opencode
+            mkdir -p /home/user/.config/opencode /home/user/.local/share/opencode
+            cat > /home/user/.config/opencode/opencode.json <<'OCJSON'
+            {
+              "$schema": "https://opencode.ai/config.json",
+              "provider": {
+                "vllm": {
+                  "npm": "@ai-sdk/openai-compatible",
+                  "name": "Private AI Gateway (llm-d)",
+                  "options": { "baseURL": "https://llm-d-gateway-data-science-gateway-class.ai-serving.svc.cluster.local/v1" },
+                  "models": {
+                    "Qwen/Qwen3.8-27B-FP8": {
+                      "name": "Qwen3.8 27B FP8 (Private AI)",
+                      "limit": { "context": 200000, "output": 8192 }
+                    }
+                  }
+                }
+              },
+              "model": "vllm/Qwen/Qwen3.8-27B-FP8"
+            }
+            OCJSON
+            cat > /home/user/.local/share/opencode/auth.json <<'OCAUTH'
+            {"vllm":{"type":"api","key":"EMPTY"}}
+            OCAUTH
           label: Install and configure AI extensions
+      - id: opencode
+        exec:
+          component: dev-tools
+          workingDir: /projects
+          commandLine: /home/user/.local/bin/opencode
+          label: "Start OpenCode (TUI)"
+          group:
+            kind: run
+            isDefault: false
     events:
       postStart:
         - install-and-configure-extensions

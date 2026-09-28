@@ -41,7 +41,7 @@ data:
     models:
       - name: Qwen3-Coder (llm-d)
         provider: openai
-        model: Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8
+        model: Qwen/Qwen3.8-27B-FP8
         apiBase: https://llm-d-gateway-data-science-gateway-class.ai-serving.svc.cluster.local/v1
         apiKey: EMPTY
         # Prevents the model from spontaneously generating XML tool-call syntax
@@ -53,7 +53,7 @@ data:
     tabAutocompleteModel:
       name: Qwen3-Coder Autocomplete (llm-d)
       provider: openai
-      model: Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8
+      model: Qwen/Qwen3.8-27B-FP8
       apiBase: https://llm-d-gateway-data-science-gateway-class.ai-serving.svc.cluster.local/v1
       apiKey: EMPTY
       requestOptions:
@@ -93,7 +93,7 @@ data:
           "apiProvider": "openai",
           "openAiBaseUrl": "https://llm-d-gateway-data-science-gateway-class.ai-serving.svc.cluster.local/v1",
           "openAiApiKey": "EMPTY",
-          "openAiModelId": "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+          "openAiModelId": "Qwen/Qwen3.8-27B-FP8",
           "openAiStreamingEnabled": false
         }
       },
@@ -130,7 +130,7 @@ data:
           "apiProvider": "openai",
           "openAiBaseUrl": "https://llm-d-gateway-data-science-gateway-class.ai-serving.svc.cluster.local/v1",
           "openAiApiKey": "EMPTY",
-          "openAiModelId": "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+          "openAiModelId": "Qwen/Qwen3.8-27B-FP8",
           "openAiStreamingEnabled": false
         }
       },
@@ -167,7 +167,7 @@ data:
           "apiProvider": "openai",
           "openAiBaseUrl": "https://llm-d-gateway-data-science-gateway-class.ai-serving.svc.cluster.local/v1",
           "openAiApiKey": "EMPTY",
-          "openAiModelId": "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+          "openAiModelId": "Qwen/Qwen3.8-27B-FP8",
           "openAiStreamingEnabled": false
         }
       },

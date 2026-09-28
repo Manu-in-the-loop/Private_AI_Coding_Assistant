@@ -36,7 +36,7 @@ spec:
   source:
     repoURL: REPLACE_WITH_GITOPS_REPO_URL
     targetRevision: main
-    path: PCA_deployment/argocd/01-operators
+    path: PCA_Deployment_ROSA/argocd/01-operators
   destination:
     server: https://kubernetes.default.svc
   syncPolicy:
@@ -69,7 +69,7 @@ spec:
   source:
     repoURL: REPLACE_WITH_GITOPS_REPO_URL
     targetRevision: main
-    path: PCA_deployment/argocd/02-platform-config
+    path: PCA_Deployment_ROSA/argocd/02-platform-config
   destination:
     server: https://kubernetes.default.svc
   syncPolicy:
@@ -101,7 +101,7 @@ spec:
   source:
     repoURL: REPLACE_WITH_GITOPS_REPO_URL
     targetRevision: main
-    path: PCA_deployment/argocd/03-ai-serving
+    path: PCA_Deployment_ROSA/argocd/03-ai-serving
   destination:
     server: https://kubernetes.default.svc
   syncPolicy:
@@ -133,7 +133,7 @@ spec:
   source:
     repoURL: REPLACE_WITH_GITOPS_REPO_URL
     targetRevision: main
-    path: PCA_deployment/argocd/04-devspaces
+    path: PCA_Deployment_ROSA/argocd/04-devspaces
   destination:
     server: https://kubernetes.default.svc
   syncPolicy:
